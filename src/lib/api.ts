@@ -1,7 +1,9 @@
+'use server'
+
 import ky from 'ky';
 
-const api = ky.create({
-    prefixUrl: '/api',
+export const api = ky.create({
+    prefixUrl: process.env.API_URL,
     headers: {
         'Content-Type': 'application/json',
     },
