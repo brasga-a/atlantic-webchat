@@ -1,17 +1,18 @@
 "use client";
 
-import { Bell, Eye, Monitor, Moon, Sun, Trash2, Volume2 } from "lucide-react";
+import { Bell, Eye, Monitor, Moon, MoonStar, Sun, Trash2, Volume2 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
+import { usePreferences } from "@/store/preferences";
 
 const themes = [
     { value: "system", label: "System", icon: Monitor },
     { value: "light", label: "Light", icon: Sun },
     { value: "dark", label: "Dark", icon: Moon },
+    { value: "more-dark", label: "More Dark", icon: MoonStar },
 ] as const;
 
 function SettingRow({ icon: Icon, label, description, children }: {
@@ -21,7 +22,7 @@ function SettingRow({ icon: Icon, label, description, children }: {
     children: React.ReactNode;
 }) {
     return (
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 flex-1">
             <div className="flex items-center gap-3">
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50">
                     <Icon className="size-4 text-muted-foreground" />
@@ -36,21 +37,19 @@ function SettingRow({ icon: Icon, label, description, children }: {
     );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
     return (
-        <div className="flex flex-col gap-4">
+        <div className={cn("flex flex-col gap-4", className)}>
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</h3>
-            <div className="flex flex-col gap-3">{children}</div>
+            <div className="flex flex-col gap-4">{children}</div>
         </div>
     );
 }
 
 export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
-    const [notifications, setNotifications] = useState(true);
-    const [sounds, setSounds]               = useState(true);
-    const [readReceipts, setReadReceipts]   = useState(true);
-    const [onlineStatus, setOnlineStatus]   = useState(true);
+    const { islandStyle, notifications, sounds, readReceipts, onlineStatus,
+            setIslandStyle, setNotifications, setSounds, setReadReceipts, setOnlineStatus } = usePreferences();
 
     return (
         <div className="h-full flex flex-col">
@@ -60,7 +59,7 @@ export default function SettingsPage() {
 
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
                 <Section title="Appearance">
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-4 gap-3">
                         {themes.map(({ value, label, icon: Icon }) => (
                             <button
                                 key={value}
@@ -77,6 +76,10 @@ export default function SettingsPage() {
                             </button>
                         ))}
                     </div>
+                    {/* Fixed or Island style */}
+                    <SettingRow icon={Sun} label="Island Style" description="Enable or disable island style layout">
+                       <Switch checked={islandStyle} onCheckedChange={setIslandStyle} />
+                    </SettingRow>
                 </Section>
 
                 <Separator />
