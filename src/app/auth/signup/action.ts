@@ -1,6 +1,6 @@
 'use server'
 
-import { api } from "@/lib/api";
+import { api } from "@/lib/ky";
 import { HTTPError } from "ky";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";

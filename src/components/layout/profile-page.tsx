@@ -1,8 +1,9 @@
 "use client";
 
-import { AtSign, Camera, FileText, User } from "lucide-react";
+import { Camera, User } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { User as UserType } from "@/types/chat";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Separator } from "../ui/separator";

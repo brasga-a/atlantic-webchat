@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { GalleryVerticalEndIcon, MessageSquare, MessagesSquare } from "lucide-react"
 import { handleLogin } from "@/app/auth/signin/action"
 import { useState } from "react"
+import { auth } from "@/services/auth/auth"
 
 export function LoginForm({
   className,
@@ -25,8 +26,15 @@ export function LoginForm({
     event.preventDefault();
     setError(null);
     const formData = new FormData(event.currentTarget);
-    const result = await handleLogin(formData);
-    if (result) setError(result.message);
+    const result = await auth.signIn({
+      username: formData.get("username") as string,
+      password: formData.get("password") as string,
+    });
+    if (result.data) {
+      window.location.href = "/";
+    } else if (result.error) {
+      setError(result.error.message);
+    }
   }
 
   return (

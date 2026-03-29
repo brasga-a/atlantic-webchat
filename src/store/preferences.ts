@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -31,3 +32,15 @@ export const usePreferences = create<PreferencesState>()(
         { name: "chat-preferences" }
     )
 );
+
+export function usePreferencesHydrated() {
+    const [hydrated, setHydrated] = useState(false);
+
+    useEffect(() => {
+        const unsub = usePreferences.persist.onFinishHydration(() => setHydrated(true));
+        if (usePreferences.persist.hasHydrated()) setHydrated(true);
+        return unsub;
+    }, []);
+
+    return hydrated;
+}

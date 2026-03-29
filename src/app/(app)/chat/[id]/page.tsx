@@ -3,16 +3,11 @@
 import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 import { useState } from "react";
-import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Button } from "../ui/button";
-import { Textarea } from "../ui/textarea";
-
-export type ChatContact = {
-    name: string;
-    username: string;
-    status: string;
-    avatar: string;
-};
+import { useParams } from "next/navigation";
+import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { mockContacts } from "@/data/contacts";
 
 const mockMessages = [
     { id: 1, from: "them", text: "Hey, how are you?",                       time: "10:00 AM" },
@@ -38,17 +33,16 @@ function statusColor(status: string) {
     }
 }
 
-interface ChatPageProps {
-    contact?: ChatContact;
-}
-
-export default function ChatPage({ contact }: ChatPageProps) {
+export default function ChatPage() {
+    const { id } = useParams<{ id: string }>();
     const [message, setMessage] = useState("");
+
+    const contact = mockContacts.find((c) => c.id === id);
 
     if (!contact) {
         return (
             <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground select-none">
-                <p className="text-sm">Select a conversation to start chatting</p>
+                <p className="text-sm">Conversation not found</p>
             </div>
         );
     }
