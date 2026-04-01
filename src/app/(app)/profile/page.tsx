@@ -1,13 +1,16 @@
 "use client";
 
-import { Camera, Check, X, Loader2 } from "lucide-react";
-import { useState, useCallback, useRef } from "react";
+import { ArrowLeft, Camera, Check, X, Loader2 } from "lucide-react";
+import { useState, useCallback, useRef, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useUser } from "@/providers/user-provider";
 import { user as userService } from "@/services/user";
+import { useQueryClient } from "@tanstack/react-query";
+
 
 function FieldRow({ icon: Icon, label, children }: {
     icon?: React.ComponentType<{ className?: string }>;
@@ -39,15 +42,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function ProfilePage() {
+    const router = useRouter();
     const currentUser = useUser();
+    const queryClient = useQueryClient();
     const [name, setName] = useState(currentUser?.name);
+    const [email, setEmail] = useState(currentUser?.email);
     const [username, setUsername] = useState(currentUser?.username);
     const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
     const [usernameError, setUsernameError] = useState<string | null>(null);
+    const [emailStatus, setEmailStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+    const [emailError, setEmailError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // const [bio, setBio] = useState(currentUser?.bio);
+    const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatar_url);
+    const [uploadingAvatar, startAvatarUpload] = useTransition();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const usernameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const emailDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const handleUsernameChange = useCallback((value: string) => {
         setUsername(value);
@@ -55,15 +66,15 @@ export default function ProfilePage() {
 
         if (!value || value === currentUser?.username) {
             setUsernameStatus("idle");
-            if (debounceRef.current) clearTimeout(debounceRef.current);
+            if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current);
             return;
         }
 
         setUsernameStatus("checking");
 
-        if (debounceRef.current) clearTimeout(debounceRef.current);
+        if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current);
 
-        debounceRef.current = setTimeout(async () => {
+        usernameDebounceRef.current = setTimeout(async () => {
             const { data, error } = await userService.verifyUsername({ username: value });
 
             if (error) {
@@ -76,14 +87,72 @@ export default function ProfilePage() {
         }, 500);
     }, [currentUser?.username]);
 
-    const hasChanges = name !== currentUser?.name || username !== currentUser?.username;
-    const canSave = hasChanges && usernameStatus !== "checking" && usernameStatus !== "taken" && !saving;
+    const handleEmailChange = useCallback((value: string) => {
+        setEmail(value);
+        setEmailError(null);
+
+        if (!value || value === currentUser?.email) {
+            setEmailStatus("idle");
+            if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current);
+            return;
+        }
+
+        setEmailStatus("checking");
+
+        if (emailDebounceRef.current) clearTimeout(emailDebounceRef.current);
+
+        emailDebounceRef.current = setTimeout(async () => {
+            const { data, error } = await userService.verifyEmail({ email: value });
+
+            if (error) {
+                setEmailStatus("idle");
+                setEmailError(error.message);
+                return;
+            }
+
+            setEmailStatus(data?.available ? "available" : "taken");
+        }, 500);
+    }, [currentUser?.email]);
+
+    const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            setSaveError("File type not allowed. Use PNG, JPG or WebP.");
+            e.target.value = "";
+            return;
+        }
+
+        setSaveError(null);
+        const formData = new FormData();
+        formData.append("file", file);
+
+        startAvatarUpload(async () => {
+            const { data, error } = await userService.uploadAvatar(formData);
+            if (error) {
+                setSaveError(error.message);
+                return;
+            }
+            if (data) {
+                await queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
+            }
+        });
+
+        // Reset input so the same file can be re-selected
+        e.target.value = "";
+    };
+
+    const hasChanges = name !== currentUser?.name || username !== currentUser?.username || email !== currentUser?.email;
+    const canSave = hasChanges && usernameStatus !== "checking" && usernameStatus !== "taken" && emailStatus !== "checking" && emailStatus !== "taken" && !saving;
 
     const handleSave = async () => {
         setSaving(true);
         setSaveError(null);
 
-        const { error } = await userService.updateProfile({ name, username });
+        const { error } = await userService.updateProfile({ name, username, email });
 
         setSaving(false);
 
@@ -92,12 +161,15 @@ export default function ProfilePage() {
             return;
         }
 
-        window.location.reload();
+        await queryClient.invalidateQueries({ queryKey: ["user", "profile"] });
     };
 
     return (
         <div className="h-full flex flex-col">
             <div className="shrink-0 flex items-center gap-3 px-4 py-3 h-16 border-b">
+                <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => router.push("/")}>
+                    <ArrowLeft className="size-4" />
+                </Button>
                 <h1 className="text-lg font-medium">Profile</h1>
             </div>
 
@@ -106,16 +178,28 @@ export default function ProfilePage() {
                     <div className="flex items-center gap-4">
                         <div className="relative">
                             <Avatar className="size-16">
-                                <AvatarImage src="https://github.com/brasga-a.png" />
-                                <AvatarFallback>BR</AvatarFallback>
+                                <AvatarImage src={avatarUrl ?? undefined} />
+                                <AvatarFallback>{currentUser?.name?.charAt(0)?.toUpperCase() ?? "?"}</AvatarFallback>
                             </Avatar>
-                            <button className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 shadow-sm hover:bg-primary/90 transition-colors">
-                                <Camera className="size-3" />
+                            <button
+                                type="button"
+                                disabled={uploadingAvatar}
+                                onClick={() => fileInputRef.current?.click()}
+                                className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+                            >
+                                {uploadingAvatar ? <Loader2 className="size-3 animate-spin" /> : <Camera className="size-3" />}
                             </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                className="hidden"
+                                onChange={handleAvatarChange}
+                            />
                         </div>
                         <div>
                             <p className="text-sm font-medium">Profile picture</p>
-                            <p className="text-xs text-muted-foreground">JPG, PNG or GIF. Max 2MB.</p>
+                            <p className="text-xs text-muted-foreground">JPG, PNG or WebP. Max 2MB.</p>
                         </div>
                     </div>
                 </Section>
@@ -158,14 +242,37 @@ export default function ProfilePage() {
                         </div>
                     </FieldRow>
 
-                    {/* <FieldRow label="Bio">
-                        <Textarea
-                            placeholder="Tell people a little about yourself..."
-                            className="resize-none"
-                            value={bio}
-                            onChange={(e) => setBio(e.target.value)}
-                        />
-                    </FieldRow> */}
+                    <FieldRow label="Email">
+                        <div className="flex flex-col gap-1.5">
+                            <div className={`flex items-center rounded-lg border overflow-hidden transition-shadow ${
+                                emailStatus === "available" ? "border-green-500 focus-within:ring-green-500/50" :
+                                emailStatus === "taken" || emailError ? "border-red-500 focus-within:ring-red-500/50" :
+                                "border-input focus-within:border-ring focus-within:ring-ring/50"
+                            } focus-within:ring-3`}>
+                                <input
+                                    type="email"
+                                    className="flex-1 h-8 px-2.5 text-sm bg-transparent outline-none"
+                                    value={email ?? ""}
+                                    onChange={(e) => handleEmailChange(e.target.value)}
+                                    placeholder="your@email.com"
+                                />
+                                <span className="px-2.5 flex items-center">
+                                    {emailStatus === "checking" && <Loader2 className="size-4 text-muted-foreground animate-spin" />}
+                                    {emailStatus === "available" && <Check className="size-4 text-green-500" />}
+                                    {emailStatus === "taken" && <X className="size-4 text-red-500" />}
+                                </span>
+                            </div>
+                            {emailStatus === "taken" && (
+                                <p className="text-xs text-red-500">Email is already taken</p>
+                            )}
+                            {emailError && (
+                                <p className="text-xs text-red-500">{emailError}</p>
+                            )}
+                            {emailStatus === "available" && (
+                                <p className="text-xs text-green-500">Email is available</p>
+                            )}
+                        </div>
+                    </FieldRow>
                 </Section>
 
                 {saveError && (

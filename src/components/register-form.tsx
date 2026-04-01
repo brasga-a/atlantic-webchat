@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { GalleryVerticalEndIcon, MessageSquare, MessagesSquare } from "lucide-react"
 import { handleRegister } from "@/app/auth/signup/action"
 import { useState } from "react"
+import { auth } from "@/services/auth/auth"
 
 export function RegisterForm({
   className,
@@ -23,10 +24,20 @@ export function RegisterForm({
 
   const handleSubmit = async (event: React.SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    const formData = new FormData(event.currentTarget);
-    const result = await handleRegister(formData);
-    if (result) setError(result.message);
+        setError(null);
+        const formData = new FormData(event.currentTarget);
+        const result = await auth.signUp({
+          username: formData.get("username") as string,
+          email: formData.get("email") as string,
+          password: formData.get("password") as string,
+          confirm_password: formData.get("confirm_password") as string,
+        });
+        console.log(formData.get("username"), formData.get("password"), formData.get("confirm_password"))
+        if (result.data) {
+          window.location.href = "/";
+        } else if (result.error) {
+          setError(result.error.message);
+        }
   }
 
   return (
@@ -36,30 +47,36 @@ export function RegisterForm({
       >
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
-            <a
-              href="#"
-              className="flex flex-col items-center gap-2 font-medium"
-            >
-              <div className="flex size-8 items-center justify-center rounded-md">
-                <MessagesSquare className="size-6" />
-              </div>
-              <span className="sr-only">PyChat</span>
-            </a>
-            <h1 className="text-xl font-bold">Welcome to PyChat.</h1>
+           <div className="flex  items-center justify-center rounded-md">
+              <span className="text-lg font-bold">atlantic</span>
+            </div>
+            <h1 className="text-xl font-bold">Welcome to WebChat.</h1>
             <FieldDescription>
-              have an account? <a href="#">Sign In</a>
+              have an account? <a href="/auth/signin">Sign In</a>
             </FieldDescription>
           </div>
-          <Field>
-            <FieldLabel htmlFor="email">Username</FieldLabel>
-            <Input
-              id="username"
-              name="username"
-              type="text"
-              placeholder="Enter your username"
-              required
-            />
-          </Field>
+          <FieldGroup className="flex-row">
+            <Field>
+              <FieldLabel htmlFor="email">Username</FieldLabel>
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="Enter your username"
+                required
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="email">Email</FieldLabel>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+                required
+              />
+            </Field>
+          </FieldGroup>
           <FieldGroup className="flex flex-row">
             <Field>
               <FieldLabel htmlFor="password">Password</FieldLabel>
@@ -87,7 +104,7 @@ export function RegisterForm({
             <p className="text-sm text-red-500">{error}</p>
           )}
           <Field>
-            <Button type="submit">Login</Button>
+            <Button type="submit">Register</Button>
           </Field>
         </FieldGroup>
       </form>

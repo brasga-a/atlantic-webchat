@@ -1,18 +1,21 @@
 "use client";
 
+import { useProfile } from "@/hooks/use-profile";
 import { UserType } from "@/services/user/user.type";
 import { createContext, useContext } from "react";
 
-const UserContext = createContext<UserType | null>(null);
+const UserContext = createContext<UserType | undefined>(undefined);
 
 export function UserProvider({
-  user,
+  initialUser,
   children,
 }: {
-  user: UserType | null;
+  initialUser: UserType | null;
   children: React.ReactNode;
 }) {
-  return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
+  const { data } = useProfile(initialUser);
+
+  return <UserContext.Provider value={data}>{children}</UserContext.Provider>;
 }
 
 export function useUser() {

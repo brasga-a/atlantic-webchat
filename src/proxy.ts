@@ -2,19 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_ROUTES = ["/auth/signin", "/auth/signup"];
 const COOKIE_NAME = "session";
-const PRIVATE_ROUTES = ["/", "/profile", "/settings", "/chat/*"];
 
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const isAuthenticated = request.cookies.has(COOKIE_NAME);
-    const isAuthRoute = PUBLIC_ROUTES.includes(pathname);
-    const isPrivateRoute = PRIVATE_ROUTES.includes(pathname);
+    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
-    if (isAuthRoute && isAuthenticated) {
+    if (isPublicRoute && isAuthenticated) {
         return NextResponse.redirect(new URL("/", request.url));
     }
 
-    if (isPrivateRoute && !isAuthenticated) {
+    if (!isPublicRoute && !isAuthenticated) {
         return NextResponse.redirect(new URL("/auth/signin", request.url));
     }
 

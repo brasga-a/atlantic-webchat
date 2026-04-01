@@ -27,7 +27,7 @@ export function LoginForm({
     setError(null);
     const formData = new FormData(event.currentTarget);
     const result = await auth.signIn({
-      username: formData.get("username") as string,
+      identifier: formData.get("identifier") as string,
       password: formData.get("password") as string,
     });
     if (result.data) {
@@ -44,27 +44,21 @@ export function LoginForm({
       >
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
-            <a
-              href="#"
-              className="flex flex-col items-center gap-2 font-medium"
-            >
-              <div className="flex size-8 items-center justify-center rounded-md">
-                <MessagesSquare className="size-6" />
-              </div>
-              <span className="sr-only">PyChat</span>
-            </a>
-            <h1 className="text-xl font-bold">Welcome to PyChat.</h1>
+            <div className="flex  items-center justify-center rounded-md">
+              <span className="text-lg font-bold">atlantic</span>
+            </div>
+            <h1 className="text-xl font-bold">Welcome to WebChat.</h1>
             <FieldDescription>
-              Don&apos;t have an account? <a href="#">Sign up</a>
+              Don&apos;t have an account? <a href="/auth/signup">Sign up</a>
             </FieldDescription>
           </div>
           <Field>
-            <FieldLabel htmlFor="email">Username</FieldLabel>
+            <FieldLabel htmlFor="identifier">Username or Email</FieldLabel>
             <Input
-              id="username"
-              name="username"
+              id="identifier"
+              name="identifier"
               type="text"
-              placeholder="Enter your username"
+              placeholder="Enter your username or email"
               required
             />
           </Field>

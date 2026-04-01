@@ -1,12 +1,27 @@
 "use client";
 
-import { Bell, Eye, Monitor, Moon, MoonStar, Sun, Trash2, Volume2 } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Bell, Eye, Monitor, Moon, MoonStar, Sun, Trash2, Volume2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { usePreferences } from "@/store/preferences";
+import { useUser } from "@/providers/user-provider";
+import { deleteProfile } from "@/services/user/delete";
 
 const themes = [
     { value: "system", label: "System", icon: Monitor },
@@ -47,19 +62,39 @@ function Section({ title, children, className }: { title: string; children: Reac
 }
 
 export default function SettingsPage() {
+    const router = useRouter();
     const { theme, setTheme } = useTheme();
     const { islandStyle, notifications, sounds, readReceipts, onlineStatus,
             setIslandStyle, setNotifications, setSounds, setReadReceipts, setOnlineStatus } = usePreferences();
+    const user = useUser();
+    const [confirmText, setConfirmText] = useState("");
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [open, setOpen] = useState(false);
+
+    const canDelete = confirmText === user?.username;
+
+    async function handleDeleteAccount() {
+        setIsDeleting(true);
+        const { error } = await deleteProfile();
+        setIsDeleting(false);
+
+        if (error) return;
+
+        window.location.href = "/auth/signin";
+    }
 
     return (
         <div className="h-full flex flex-col">
             <div className="shrink-0 flex items-center gap-3 px-4 py-3 h-16 border-b">
+                <Button variant="ghost" size="icon" className="md:hidden shrink-0" onClick={() => router.push("/")}>
+                    <ArrowLeft className="size-4" />
+                </Button>
                 <h1 className="text-lg font-medium">Settings</h1>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
                 <Section title="Appearance">
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {themes.map(({ value, label, icon: Icon }) => (
                             <button
                                 key={value}
@@ -84,7 +119,7 @@ export default function SettingsPage() {
 
                 <Separator />
 
-                <Section title="Notifications">
+                {/* <Section title="Notifications">
                     <SettingRow icon={Bell} label="Push notifications" description="Receive alerts for new messages">
                         <Switch checked={notifications} onCheckedChange={setNotifications} />
                     </SettingRow>
@@ -102,13 +137,51 @@ export default function SettingsPage() {
                     <SettingRow icon={Eye} label="Show online status" description="Let others see when you're online">
                         <Switch checked={onlineStatus} onCheckedChange={setOnlineStatus} />
                     </SettingRow>
-                </Section>
+                </Section> 
 
-                <Separator />
+                <Separator />*/}
 
                 <Section title="Danger zone">
                     <SettingRow icon={Trash2} label="Delete account" description="Permanently delete your account and all data">
-                        <Button variant="destructive" size="sm">Delete</Button>
+                        <Dialog open={open} onOpenChange={(open) => { setOpen(open); if (!open) setConfirmText(""); }}>
+                            <DialogTrigger render={<Button variant="destructive" size="sm" />}>
+                                Delete
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Delete account</DialogTitle>
+                                    <DialogDescription>
+                                        This action is <strong>irreversible</strong>. This will permanently delete your
+                                        account, messages, and all associated data.
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <div className="flex flex-col gap-2">
+                                    <p className="text-sm text-muted-foreground">
+                                        To confirm, type <strong className="text-foreground">{user?.username}</strong> below:
+                                    </p>
+                                    <Input
+                                        placeholder="Enter your username"
+                                        value={confirmText}
+                                        onChange={(e) => setConfirmText(e.target.value)}
+                                        autoComplete="off"
+                                    />
+                                </div>
+
+                                <DialogFooter>
+                                    <DialogClose render={<Button variant="outline" />}>
+                                        Cancel
+                                    </DialogClose>
+                                    <Button
+                                        variant="destructive"
+                                        disabled={!canDelete || isDeleting}
+                                        onClick={handleDeleteAccount}
+                                    >
+                                        {isDeleting ? "Deleting..." : "Delete my account"}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
                     </SettingRow>
                 </Section>
             </div>
